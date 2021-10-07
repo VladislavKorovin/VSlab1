@@ -1,4 +1,4 @@
-#define N 8000
+#define N 10
 
 #include "mpi.h"
 #include <cstdlib>
@@ -72,6 +72,19 @@ void fillMatrix(float** a) {
 		}
 }
 
+void fillMatrixWithValue(float** a, float value) {
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < N; j++) 
+			a[i][j] = value;	
+}
+
+void negateMatrix(float** a, float** b) {
+	for (int i = 0; i < N; i++)
+		for (int j = 0; j < N; j++)
+			b[i][j] = (-1) * a[i][j];
+}
+
+
 void printMatrix(float** a) {
 	for (int i = 0; i < N; i++) {
 		for (int j = 0; j < N; j++)
@@ -98,26 +111,56 @@ int free_memory(float** aArray, int dim) {
 	return 0;
 }
 
+void sendMatrix(float** matrix, int rank) {	
+	for(int i = 0; i < N; i++)
+		MPI_Send(matrix[i], N, MPI_FLOAT, rank, 0, MPI_COMM_WORLD);
+}
 
-int main(int *argc, char **argv) {
+void receiveMatrix(float** matrix, int rank) {
+	MPI_Status status;
+	for (int i = 0; i < N; i++)
+		MPI_Recv(matrix[i], N, MPI_FLOAT, rank, 0, MPI_COMM_WORLD, &status);
+}
+
+
+int main(int argc, char **argv) {
 	srand(time(nullptr));
 
 	float** a = create_float_array(N);
 	float** b = create_float_array(N);
 	float** c = create_float_array(N);
+	float** d = create_float_array(N);
+	float** e = create_float_array(N);
+	float** g = create_float_array(N);
 
 	fillMatrix(a);
 	fillMatrix(b);
-	
-	add(a, b, c);
-	sub(a, b, c);
-	mult(a, b, c);
-	div(a, b, c);
+	fillMatrix(c);
+	fillMatrix(d);
+	fillMatrix(e);
+	fillMatrix(g);	
 
-	free_memory(a, N);
-	free_memory(b, N);
-	free_memory(c, N);
-	_sleep(10000);
+	int rank;
+	MPI_Status status;
+
+	MPI_Init(&argc, &argv);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+
+	if (rank == 0) {	
+		fillMatrixWithValue(a, 0.0);
+		sendMatrix(a, 1);
+	};
+
+	if (rank == 1) {		
+		receiveMatrix(b, 0);
+		printMatrix(b);
+	};
+	
+	MPI_Finalize();
+
+
+	return(0);
+	//_sleep(10000);
 }
 
 
